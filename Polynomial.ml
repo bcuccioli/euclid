@@ -1,13 +1,32 @@
 module Polynomial = struct
 
+  module SS = Set.Make(String)
+
+  exception Empty_polynomial
+
   (* Terms have a rational coefficient and variables with integer powers. *)
   type term = (int * int) * (string * int) list
   type poly = term list
 
+  (* Ensures that t has all the same variables present as t union s. *)
+  let normalize ((ct,lt): term) ((cs,ls): term) : term =
+    (* TODO: this could be more efficient. *)
+    let lift l m : (string * int) list =
+      let insert l init = List.fold_left (fun acc x -> SS.add x acc) init l in
+      let proj = List.map (fun (v,_) -> v) in
+      List.map
+        (fun v -> (v, try List.assoc v l with Not_found -> 0))
+        (List.sort
+          String.compare
+          (SS.elements (insert (proj l) (insert (proj m) SS.empty)))) in
+    (ct, lift lt ls)
+
+  let normalize_in_poly (t: term) (p: poly) : term =
+    List.fold_left normalize t p
+
   module Order = struct
     type order = int list -> int list -> int
     type porder = term -> term -> int
-    module SS = Set.Make(String)
 
     let sum = List.fold_left (+) 0
 
@@ -25,16 +44,11 @@ module Polynomial = struct
       if sum a = sum b then -lex (List.rev a) (List.rev b)
       else (if sum a > sum b then 1 else -1)
 
-    let poly_order (f: order) : porder =
-      (* TODO: this could be more efficient. *)
-      let insert l init = List.fold_left (fun acc x -> SS.add x acc) init l in
-      let projv = List.map (fun (v,_) -> v) in
-      let lift l m : int list = List.map
-        (fun v -> try List.assoc v l with Not_found -> 0)
-        (List.sort
-          String.compare
-          (SS.elements (insert (projv l) (insert (projv m) SS.empty)))) in
-      fun (_,l) (_,m) -> f (lift l m) (lift m l)
+    let poly_order (f: order) : porder = fun s t ->
+      let (_,s') = normalize s t in
+      let (_,t') = normalize t s in
+      let proj = List.map (fun (_,p) -> p) in
+      f (proj s') (proj t')
   end
 
   let to_string (p: poly) : string =
@@ -50,5 +64,4 @@ module Polynomial = struct
 
   let to_poly (p: int list) : poly =
     List.mapi (fun i t -> ((t,1),["x",i])) p
-
 end
