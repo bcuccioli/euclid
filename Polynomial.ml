@@ -64,4 +64,11 @@ module Polynomial = struct
 
   let to_poly (p: int list) : poly =
     List.mapi (fun i t -> ((t,1),["x",i])) p
+
+  let leading_term : poly -> term =
+    Util.list_max (Order.poly_order Order.lex)
+
+  let multideg (p: poly) : int list =
+    let (_,l) = normalize_in_poly (leading_term p) p in
+    List.map (fun (_,p) -> p) l
 end
