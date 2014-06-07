@@ -68,7 +68,7 @@ module Polynomial = struct
         (if p = 0 then "" else v) ^
         (if p > 1 then "^" ^ (string_of_int p) else "") in
       let cs =
-        if m mod n = 0 then (if m/n = 1 then "" else (string_of_int (m/n)))
+        if m mod n = 0 then string_of_int (m/n)
         else "(" ^ (string_of_int m) ^ "/" ^ (string_of_int n) ^ ")" in
       cs ^ String.concat "" (List.map string_of_var l) in
     String.concat "+" (List.map string_of_term p)
@@ -129,4 +129,27 @@ module Polynomial = struct
     sub_poly
       (term_times (divide_term gamma ltf) f)
       (term_times (divide_term gamma ltg) g)
+
+  let modulo (p: poly) (fs: poly list) : poly =
+    let divides (t: term) (s: term) : bool =
+      let ((_,t), (_,s)) = normalize_mutual t s in
+      List.for_all2 (fun (_,p) (_,q) -> p <= q) t s in
+    let rec divstep' (p: poly) (i: int) : bool*poly =
+      if i >= List.length fs then (false, p)
+      else (
+        let fi = List.nth fs i in
+        if divides (leading_term fi) (leading_term p) then
+          (true, sub_poly p
+            (term_times (divide_term (leading_term p) (leading_term fi)) fi))
+        else divstep' p (i+1)) in
+    let rec divstep (p: poly) (r: poly) : poly =
+      if p = [] then r
+      else (
+        let (d,p) = divstep' p 0 in
+        if d then divstep p r
+        else divstep
+          (sub_poly p [leading_term p])
+          (add_poly r [leading_term p])) in
+    divstep p [((0,1),[])]
+
 end
