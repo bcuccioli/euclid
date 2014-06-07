@@ -1,8 +1,8 @@
+open Util
+
 module Polynomial = struct
 
   module SS = Set.Make(String)
-
-  exception Empty_polynomial
 
   (* Terms have a rational coefficient and variables with integer powers. *)
   type term = (int * int) * (string * int) list
@@ -94,6 +94,13 @@ module Polynomial = struct
       (simplify (m*m', n*n'), List.map2 (fun (v,p) (_,p') -> (v,p+p')) t t') in
     List.map (fun s -> let (t,s) = normalize_mutual t s in ttimes t s) p
 
+  let clean_poly (p: poly) : poly =
+    (* Removes terms with 0 coefficient, factors with 0 power, and simplifies
+     * coefficients. *)
+    List.map
+      (fun (c,l) -> (simplify c, List.filter (fun (_,p) -> p <> 0) l))
+      (List.filter (fun ((m,_),_) -> m <> 0) p)
+
   let add_term_poly (p: poly) ((c,t): term) : poly =
     let add (m,n) (p,q) = (m*q + n*p, n*q) in
     let (t', p') = List.partition (fun (_,s) -> t = s) p in
@@ -104,7 +111,11 @@ module Polynomial = struct
     (add c c', t')::p'
 
   let add_poly (f: poly) (g: poly) : poly =
-    List.fold_left add_term_poly f g
+    clean_poly (List.fold_left add_term_poly f g)
+
+  let sub_poly (f: poly) (g: poly) : poly =
+    let g' = List.map (fun ((m,n),l) -> ((-m,n),l)) g in
+    clean_poly (add_poly f g')
 
   let s_poly (f: poly) (g: poly) : poly =
     (* TODO: we could decrease the total number of calls to normalize here. *)
@@ -115,7 +126,7 @@ module Polynomial = struct
       (c, List.map2
         (fun (v,_) y -> (v,y)) t
         (List.map2 max (multideg f) (multideg g)))) ltf in
-    add_poly
+    sub_poly
       (term_times (divide_term gamma ltf) f)
       (term_times (divide_term gamma ltg) g)
 end
