@@ -5,6 +5,12 @@
 *.cma
 *.cmi
 *.cmo
+*.native
+_build
+
+# Menhir generated parser
+parser.ml
+parser.mli
 
 # C compiled files
 *.so
