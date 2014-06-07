@@ -30,6 +30,12 @@ module Polynomial = struct
   let normalize_poly (p: poly) (q: poly) : poly =
     List.map (fun t -> normalize_in_poly t q) p
 
+  let simplify ((m,n): int*int) : int*int =
+    let rec gcd (a: int) (b: int) : int =
+      if b = 0 then a else gcd b (a mod b) in
+    let g = gcd m n in
+    (m/g, n/g)
+
   module Order = struct
     type order = int list -> int list -> int
     type porder = term -> term -> int
@@ -80,14 +86,12 @@ module Polynomial = struct
   (* Computes a quotient of two monomial terms t/s. *)
   let divide_term (t: term) (s: term) : term =
     let (((mt,nt),lt), ((ms,ns),ls)) = normalize_mutual t s in
-    (* TODO: simplify the coefficient quotient. *)
-    ((mt*ns, nt*ms), (List.map2 (fun (v,p) (_,p') -> (v,p-p')) lt ls))
+    (simplify (mt*ns, nt*ms), (List.map2 (fun (v,p) (_,p') -> (v,p-p')) lt ls))
 
   let term_times (t: term) (p: poly) : poly =
     let ttimes (((m,n),t): term) (((m',n'),t'): term) : term =
       (* Assumes terms are normalized. *)
-      (* TODO: simplify coefficient product. *)
-      ((m*m', n*n'), List.map2 (fun (v,p) (_,p') -> (v,p+p')) t t') in
+      (simplify (m*m', n*n'), List.map2 (fun (v,p) (_,p') -> (v,p+p')) t t') in
     List.map (fun s -> let (t,s) = normalize_mutual t s in ttimes t s) p
 
   let add_term_poly (p: poly) ((c,t): term) : poly =
