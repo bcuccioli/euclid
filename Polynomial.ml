@@ -98,9 +98,9 @@ module Polynomial = struct
     let add (m,n) (p,q) = (m*q + n*p, n*q) in
     let (t', p') = List.partition (fun (_,s) -> t = s) p in
     let (c', t') = match t' with
-      | []  -> ((0,1), t)
-      | [h] -> h
-      | _   -> failwith "TODO" (* TODO: add like terms if they exist. *) in
+      | []         -> ((0,1), t)
+      | [h]        -> h
+      | (hc,ht)::l -> (List.fold_left (fun acc (x,_) -> add acc x) hc l, ht) in
     (add c c', t')::p'
 
   let add_poly (f: poly) (g: poly) : poly =
