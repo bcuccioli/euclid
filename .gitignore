@@ -8,7 +8,8 @@
 *.cmx
 main
 
-# Menhir generated parser
+# Ocamlyacc generated parser
+lexer.ml
 parser.ml
 parser.mli
 
