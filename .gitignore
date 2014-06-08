@@ -5,8 +5,8 @@
 *.cma
 *.cmi
 *.cmo
-*.native
-_build
+*.cmx
+main
 
 # Menhir generated parser
 parser.ml
