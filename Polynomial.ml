@@ -77,10 +77,11 @@ module Polynomial = struct
     List.mapi (fun i t -> ((t,1),["x",i])) p
 
   let leading_term : poly -> term =
-    Util.list_max (Order.poly_order Order.lex)
+    Util.list_max (Order.poly_order Order.grlex)
 
-  let multideg (p: poly) : int list =
-    let (_,l) = normalize_in_poly (leading_term p) p in
+  let multideg (p: poly) (g: poly) : int list =
+    let t = normalize_in_poly (leading_term p) p in
+    let (_,l) = normalize_in_poly t g in
     List.map (fun (_,p) -> p) l
 
   (* Computes a quotient of two monomial terms t/s. *)
@@ -122,10 +123,11 @@ module Polynomial = struct
     let f = normalize_poly f g in
     let g = normalize_poly g f in
     let (ltf, ltg) = (leading_term f, leading_term g) in
+    let (ltf, ltg) = (normalize_in_poly ltf g, normalize_in_poly ltg f) in
     let gamma = (fun ((c,t): term) ->
       (c, List.map2
         (fun (v,_) y -> (v,y)) t
-        (List.map2 max (multideg f) (multideg g)))) ltf in
+        (List.map2 max (multideg f g) (multideg g f)))) ltf in
     sub_poly
       (term_times (divide_term gamma ltf) f)
       (term_times (divide_term gamma ltg) g)
@@ -151,5 +153,9 @@ module Polynomial = struct
           (sub_poly p [leading_term p])
           (add_poly r [leading_term p])) in
     divstep p [((0,1),[])]
+
+  let is_zero (p: poly) : bool =
+    (* TODO: this is not quite right - cancellation can occur. *)
+    List.for_all (fun ((m,_),_) -> m = 0) p
 
 end
