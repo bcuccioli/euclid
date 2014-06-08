@@ -84,6 +84,9 @@ module Polynomial = struct
     let (_,l) = normalize_in_poly t g in
     List.map (fun (_,p) -> p) l
 
+  let scalar_multiply (f: poly) ((p,q): int*int) : poly =
+    List.map (fun ((m,n),l) -> (simplify (m*p,n*q), l)) f
+
   (* Computes a quotient of two monomial terms t/s. *)
   let divide_term (t: term) (s: term) : term =
     let (((mt,nt),lt), ((ms,ns),ls)) = normalize_mutual t s in
@@ -132,10 +135,11 @@ module Polynomial = struct
       (term_times (divide_term gamma ltf) f)
       (term_times (divide_term gamma ltg) g)
 
+  let divides (t: term) (s: term) : bool =
+    let ((_,t), (_,s)) = normalize_mutual t s in
+    List.for_all2 (fun (_,p) (_,q) -> p <= q) t s
+
   let modulo (p: poly) (fs: poly list) : poly =
-    let divides (t: term) (s: term) : bool =
-      let ((_,t), (_,s)) = normalize_mutual t s in
-      List.for_all2 (fun (_,p) (_,q) -> p <= q) t s in
     let rec divstep' (p: poly) (i: int) : bool*poly =
       if i >= List.length fs then (false, p)
       else (

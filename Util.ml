@@ -9,9 +9,9 @@ module Util = struct
     | h::t ->  List.fold_left (fun acc x -> if f acc x = 1 then acc else x) h t
 
   (* Computes the list of unique elements according to =. *)
-  let unique (lst: 'a list) : 'a list =
+  let unique : 'a list -> 'a list =
     List.fold_left
       (fun acc x -> if List.mem x acc then acc else x::acc)
-      [] lst
+      []
 
 end
