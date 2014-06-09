@@ -1,6 +1,9 @@
+open Polynomial.Polynomial
+
 module Interp = struct
 
   type var = string
+  type point = string
 
   type stmt =
     | Parallel of var * var * var * var
@@ -36,5 +39,58 @@ module Interp = struct
     | Program (s,t) -> (to_string s) ^ (to_string t)
     | Statement s   -> "Hypothesis: " ^ (stmt_to_string s) ^ "\n"
     | Decide s      -> "Decide: " ^ (stmt_to_string s) ^ "\n"
+
+  let ast_to_poly (ast: ast) : poly list * poly list =
+    let vars = ref [] in
+    let hyps = ref [] in
+    let conc = ref [] in
+    let f = var_to_term in
+    let add_var (v: var) : point*point =
+      if List.exists (fun (s,_) -> s = v) !vars then
+        let (_,p) = List.find (fun (s,_) -> s = v) !vars in p
+      else (
+        let (_,next) = match !vars with
+        | []  -> (v,("0","0"))
+        | [h] -> (v,("0","x1"))
+        | _   -> (
+          let n = List.length !vars in
+          let (x,y) = (string_of_int (n*2), string_of_int (n*2+1)) in
+          (v,("x"^x, "x"^y))) in
+        vars := (v,next)::(!vars);
+        next) in
+    let rec poly_of_stmt : stmt -> poly = function
+      | Nil | Cons _ -> failwith "Error: desugar first."
+      | Parallel (a,b,c,d) -> (
+        let ((ax,ay),(bx,by),(cx,cy),(dx,dy)) =
+          (add_var a, add_var b, add_var c, add_var d) in
+        (f (cy,dx) 1)::(f (cy,bx) (-1))::(f (ay,dx) (-1))::(f (ay,bx) 1)::
+          (f (dy,cx) (-1))::(f (dy,ax) 1)::(f (by,cx) 1)::[f (by,ax) (-1)])
+      | Colin (a,b,c) -> (
+        let ((ax,ay),(bx,by),(cx,cy)) = (add_var a, add_var b, add_var c) in
+        (f (by,cx) 1)::(f (by,ax) (-1))::(f (ay,cx) (-1))::(f (cy,bx) (-1))::
+          (f (cy,ax) 1)::[(f (ay,bx) 1)])
+      | DistEq (a,b,c,d) -> (
+        let ((ax,ay),(bx,by),(cx,cy),(dx,dy)) =
+          (add_var a, add_var b, add_var c, add_var d) in
+        [(1,1),[ay,2]; (1,1),[by,2]; f (ay,by) (-2);
+          (1,1),[ax,2]; (1,1),[bx,2]; f (ax,bx) (-2);
+          (-1,1),[cy,2]; (-1,1),[dy,2]; f (cy,dy) 2;
+          (-1,1),[cx,2]; (-1,1),[dx,2]; f (cx,dx) 2])
+      | _ -> failwith "not yet implemented" in
+    let clean_poly_of_stmt (s: stmt) : poly =
+      (* Cleans out terms with 0 factors that arise because one "variable"
+       * is 0. *)
+      let p = poly_of_stmt s in
+      List.filter (fun (_,t) -> List.for_all (fun (v,_) -> v <> "0") t) p in
+    let rec desugar_stmts (l: stmt list) : stmt -> stmt list = function
+      | Nil         -> l
+      | Cons (a,b)  -> desugar_stmts (a::l) b
+      | _ as s      -> s::l in
+    match ast with
+      | Program (Statement s, Decide t) -> (
+        hyps := List.map clean_poly_of_stmt (desugar_stmts [] s);
+        conc := List.map clean_poly_of_stmt (desugar_stmts [] t);
+        (!hyps, !conc))
+      | _             -> failwith "Parser error: Did not produce Program."
 
 end
