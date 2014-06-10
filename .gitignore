@@ -13,6 +13,8 @@ lexer.ml
 parser.ml
 parser.mli
 
+test*
+
 # C compiled files
 *.so
 *.a
