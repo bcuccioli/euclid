@@ -1,4 +1,5 @@
 open Polynomial.Polynomial
+open Rat
 
 module Interp = struct
 
@@ -44,7 +45,8 @@ module Interp = struct
     let vars = ref [] in
     let hyps = ref [] in
     let conc = ref [] in
-    let f = var_to_term in
+    let f (v,w) coef =
+      ((coef,1),[(v,1);(w,1)]) in
     let add_var (v: var) : point*point =
       if List.exists (fun (s,_) -> s = v) !vars then
         let (_,p) = List.find (fun (s,_) -> s = v) !vars in p
@@ -58,7 +60,7 @@ module Interp = struct
           (v,("x"^x, "x"^y))) in
         vars := (v,next)::(!vars);
         next) in
-    let rec poly_of_stmt : stmt -> poly = function
+    let rec poly_of_stmt = function
       | Nil | Cons _ -> failwith "Error: desugar first."
       | Parallel (a,b,c,d) -> (
         let ((ax,ay),(bx,by),(cx,cy),(dx,dy)) =
@@ -81,15 +83,22 @@ module Interp = struct
       (* Cleans out terms with 0 factors that arise because one "variable"
        * is 0. *)
       let p = poly_of_stmt s in
+      let p = List.map (fun ((m,n),t) -> ((Rat.of_int m,Rat.of_int n),t)) p in
       List.filter (fun (_,t) -> List.for_all (fun (v,_) -> v <> "0") t) p in
     let rec desugar_stmts (l: stmt list) : stmt -> stmt list = function
       | Nil         -> l
       | Cons (a,b)  -> desugar_stmts (a::l) b
       | _ as s      -> s::l in
+    let morph_concs (concs: poly list) : poly list =
+      let prods =
+        List.map
+          (fun p -> List.map (fun ((m,n),t) -> ((Rat.neg m,n),t@["y",0])) p)
+          concs in
+      List.map (add_poly [((Rat.one,Rat.one),[])]) prods in
     match ast with
       | Program (Statement s, Decide t) -> (
         hyps := List.map clean_poly_of_stmt (desugar_stmts [] s);
-        conc := List.map clean_poly_of_stmt (desugar_stmts [] t);
+        conc := morph_concs (List.map clean_poly_of_stmt (desugar_stmts [] t));
         (!hyps, !conc))
       | _             -> failwith "Parser error: Did not produce Program."
 
