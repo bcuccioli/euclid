@@ -47,10 +47,10 @@ conclusion:
 ;
 
 hyps:
-  | { Interp.Nil }
-  | stmt SEMICOLON hyps { Interp.Cons ($1, $3) }
+  | { [] }
+  | stmt SEMICOLON hyps { $1::$3 }
 ;
 
 prog:
-  | hyps conclusion { Interp.Program (Interp.Statement $1, Interp.Decide $2) }
+  | hyps conclusion { Interp.Program ($1, $2) }
 ;

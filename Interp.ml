@@ -15,13 +15,9 @@ module Interp = struct
     | Midpoint of var * var * var
     | AngleEq of var * var * var * var * var * var
     | Bisects of var * var * var * var * var
-    | Cons of stmt * stmt
-    | Nil
 
   type ast =
-    | Statement of stmt
-    | Decide of stmt
-    | Program of ast * ast
+    | Program of stmt list * stmt
 
   let rec stmt_to_string : stmt -> string = function
     | Parallel (a,b,c,d)    -> Printf.sprintf "Parallel (%s%s,%s%s)" a b c d
@@ -33,13 +29,11 @@ module Interp = struct
     | AngleEq (a,b,c,d,e,f) ->
         Printf.sprintf "AngleEq (%s%s%s,%s%s%s)" a b c d e f
     | Bisects (a,b,c,d,e)   -> Printf.sprintf "Bisects (%s%s,%s%s%s)" a b c d e
-    | Cons (s,t)            -> (stmt_to_string s) ^ "\n" ^ (stmt_to_string t)
-    | Nil                   -> ""
 
   let rec to_string : ast -> string = function
-    | Program (s,t) -> (to_string s) ^ (to_string t)
-    | Statement s   -> "Hypothesis: " ^ (stmt_to_string s) ^ "\n"
-    | Decide s      -> "Decide: " ^ (stmt_to_string s) ^ "\n"
+    | Program (s,t) ->
+        (String.concat "" (List.map (stmt_to_string) s)) ^
+        (stmt_to_string t)
 
   let ast_to_poly (ast: ast) : poly list * poly list =
     let vars = ref [] in
@@ -61,7 +55,6 @@ module Interp = struct
         vars := (v,next)::(!vars);
         next) in
     let rec poly_of_stmt = function
-      | Nil | Cons _ -> failwith "Error: desugar first."
       | Parallel (a,b,c,d) -> (
         let ((ax,ay),(bx,by),(cx,cy),(dx,dy)) =
           (add_var a, add_var b, add_var c, add_var d) in
@@ -85,10 +78,6 @@ module Interp = struct
       let p = poly_of_stmt s in
       let p = List.map (fun ((m,n),t) -> ((Rat.of_int m,Rat.of_int n),t)) p in
       List.filter (fun (_,t) -> List.for_all (fun (v,_) -> v <> "0") t) p in
-    let rec desugar_stmts (l: stmt list) : stmt -> stmt list = function
-      | Nil         -> l
-      | Cons (a,b)  -> desugar_stmts (a::l) b
-      | _ as s      -> s::l in
     let morph_concs (concs: poly list) : poly list =
       let prods =
         List.map
@@ -96,10 +85,9 @@ module Interp = struct
           concs in
       List.map (add_poly [((Rat.one,Rat.one),[])]) prods in
     match ast with
-      | Program (Statement s, Decide t) -> (
-        hyps := List.map clean_poly_of_stmt (desugar_stmts [] s);
-        conc := morph_concs (List.map clean_poly_of_stmt (desugar_stmts [] t));
+      | Program (s,t) -> (
+        hyps := List.map clean_poly_of_stmt s;
+        conc := morph_concs (List.map clean_poly_of_stmt [t]);
         (!hyps, !conc))
-      | _             -> failwith "Parser error: Did not produce Program."
 
 end
