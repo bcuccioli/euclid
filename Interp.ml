@@ -11,10 +11,7 @@ module Interp = struct
     | Perp of var * var * var * var
     | Colin of var * var * var
     | DistEq of var * var * var * var
-    | Circle of var * var * var * var
-    | Midpoint of var * var * var
     | AngleEq of var * var * var * var * var * var
-    | Bisects of var * var * var * var * var
 
   type ast =
     | Program of stmt list * stmt
@@ -24,11 +21,8 @@ module Interp = struct
     | Perp (a,b,c,d)        -> Printf.sprintf "Perp (%s%s,%s%s)" a b c d
     | Colin (a,b,c)         -> Printf.sprintf "Colin (%s,%s,%s)" a b c
     | DistEq (a,b,c,d)      -> Printf.sprintf "DistEq (%s%s,%s%s)" a b c d
-    | Circle (a,b,c,d)      -> Printf.sprintf "Circle (%s,%s,%s%s)" a b c d
-    | Midpoint (a,b,c)      -> Printf.sprintf "Midpoint (%s,%s,%s)" a b c
     | AngleEq (a,b,c,d,e,f) ->
         Printf.sprintf "AngleEq (%s%s%s,%s%s%s)" a b c d e f
-    | Bisects (a,b,c,d,e)   -> Printf.sprintf "Bisects (%s%s,%s%s%s)" a b c d e
 
   let rec to_string : ast -> string = function
     | Program (s,t) ->
@@ -71,7 +65,15 @@ module Interp = struct
           (1,1),[ax,2]; (1,1),[bx,2]; f (ax,bx) (-2);
           (-1,1),[cy,2]; (-1,1),[dy,2]; f (cy,dy) 2;
           (-1,1),[cx,2]; (-1,1),[dx,2]; f (cx,dx) 2])
-      | _ -> failwith "not yet implemented" in
+      | Perp (a,b,c,d) -> (
+        let ((ax,ay),(bx,by),(cx,cy),(dx,dy)) =
+          (add_var a, add_var b, add_var c, add_var d) in
+        (f (by,dy) 1)::(f (by,cy) (-1))::(f (ay,dy) (-1))::(f (ay,cy) 1)::
+          (f (bx,cx) (-1))::(f (bx,dx) 1)::(f (ax,cx) 1)::[(f (ax,dx) (-1))])
+      | AngleEq (a,b,c,d,e,f) -> (
+        (* TODO: Encode this as a polynomial. AngleEq is true iff
+         * (BC)(DF) = (AC)(EF). *)
+        failwith "not implemented.") in
     let clean_poly_of_stmt (s: stmt) : poly =
       (* Cleans out terms with 0 factors that arise because one "variable"
        * is 0. *)

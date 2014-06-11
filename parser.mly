@@ -33,13 +33,13 @@ stmt:
   | DISTEQ LPAREN VAR VAR COMMA VAR VAR RPAREN
     { Interp.DistEq ($3, $4, $6, $7) }
   | CIRCLE LPAREN VAR COMMA VAR COMMA VAR VAR RPAREN
-    { Interp.Circle ($3, $5, $7, $8) }
+    { Interp.DistEq ($3, $5, $7, $8) }
   | MIDPOINT LPAREN VAR COMMA VAR VAR RPAREN
-    { Interp.Midpoint ($3, $5, $6) }
+    { Interp.DistEq ($3, $5, $3, $6) }
   | ANGLEEQ LPAREN VAR VAR VAR COMMA VAR VAR VAR RPAREN
     { Interp.AngleEq ($3, $4, $5, $7, $8, $9) }
   | BISECTS LPAREN VAR VAR COMMA VAR VAR VAR RPAREN
-    { Interp.Bisects ($3, $4, $6, $7, $8) }
+    { Interp.AngleEq ($3, $6, $4, $8, $4, $3 ) }
 ;
 
 conclusion:
